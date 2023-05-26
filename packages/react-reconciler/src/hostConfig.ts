@@ -1,4 +1,3 @@
-import { Props, ElementType } from 'shared/ReactTypes';
 export type Container = any;
 
 export const createInstance = (...args: any[]) => {

@@ -68,7 +68,7 @@ const appendPlacementNodeIntoContainer = (
 	hostParent: Container
 ) => {
 	if (finishedWork.tag === HostComponent || finishedWork.tag === HostText) {
-		appendChildToContainer(finishedWork.stateNode, hostParent);
+		appendChildToContainer(hostParent, finishedWork.stateNode);
 		return;
 	}
 
@@ -87,7 +87,7 @@ const appendPlacementNodeIntoContainer = (
 
 const commitPlacement = (finishedWork: FiberNode) => {
 	if (__DEV__) {
-		console.warn('执行 Placement 操作', finishedWork);
+		console.info('执行 Placement 操作', finishedWork);
 	}
 
 	const hostParent = getHostParent(finishedWork);

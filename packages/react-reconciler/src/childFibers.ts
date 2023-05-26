@@ -2,7 +2,7 @@ import { ReactElement } from 'shared/ReactTypes';
 import { FiberNode, createFiberFormElement } from './fiber';
 import { REACT_ELEMENT_TYPE } from 'shared/ReactSymbols';
 import { HostText } from './workTag';
-import { NoFlags, Placement } from './fiberFlags';
+import { Placement } from './fiberFlags';
 
 function childReconciler(shouldTrackEffect: boolean) {
 	function reconcileSingleElement(
