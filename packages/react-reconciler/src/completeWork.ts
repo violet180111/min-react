@@ -1,7 +1,8 @@
 import {
 	appendInitialChild,
 	createInstance,
-	createTextInstance
+	createTextInstance,
+	finalizeInitialChildren
 } from 'hostConfig';
 import { FiberNode } from './fiber';
 import {
@@ -10,8 +11,13 @@ import {
 	HostRoot,
 	HostText
 } from './workTag';
-import { NoFlags } from './fiberFlags';
+import { NoFlags, Update } from './fiberFlags';
 import { Container } from './hostConfig';
+import { updateFiberProps } from 'react-dom/src/SyntheticEvent';
+
+export const markUpdate = (fiber: FiberNode) => {
+	fiber.flags |= Update;
+};
 
 export const completeWork = (wip: FiberNode) => {
 	if (__DEV__) {
@@ -24,17 +30,29 @@ export const completeWork = (wip: FiberNode) => {
 	switch (wip.tag) {
 		case HostComponent:
 			if (current !== null && wip.stateNode) {
+				// updateFiberProps(wip.stateNode, newProps);
 			} else {
 				const instance = createInstance(wip.type, newProps);
 
 				appendAllChildren(instance, wip);
 
 				wip.stateNode = instance;
+
+				if (finalizeInitialChildren(instance, wip.type, newProps)) {
+					markUpdate(wip);
+				}
 			}
 			bubbleProperties(wip);
+
 			return null;
 		case HostText:
-			if (current !== null && wip.stateNode) {
+			if (current && wip.stateNode) {
+				const oldText = current.memoizedProps?.content;
+				const nextText = newProps.content;
+
+				if (oldText !== nextText) {
+					markUpdate(wip);
+				}
 			} else {
 				const instance = createTextInstance(newProps.content);
 
