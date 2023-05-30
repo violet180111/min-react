@@ -30,7 +30,7 @@ export const completeWork = (wip: FiberNode) => {
 	switch (wip.tag) {
 		case HostComponent:
 			if (current !== null && wip.stateNode) {
-				// updateFiberProps(wip.stateNode, newProps);
+				updateFiberProps(wip.stateNode, newProps);
 			} else {
 				const instance = createInstance(wip.type, newProps);
 
@@ -38,9 +38,9 @@ export const completeWork = (wip: FiberNode) => {
 
 				wip.stateNode = instance;
 
-				if (finalizeInitialChildren(instance, wip.type, newProps)) {
-					markUpdate(wip);
-				}
+				// if (finalizeInitialChildren(instance, wip.type, newProps)) {
+				// 	markUpdate(wip);
+				// }
 			}
 			bubbleProperties(wip);
 

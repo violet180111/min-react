@@ -130,11 +130,6 @@ const commitDeletion = (childToDeletion: FiberNode) => {
 					rootHostNode = unmountFiber;
 				}
 				return;
-			case HostComponent:
-				if (rootHostNode === null) {
-					rootHostNode = unmountFiber;
-				}
-				return;
 			case FunctionComponent:
 				return;
 			default:

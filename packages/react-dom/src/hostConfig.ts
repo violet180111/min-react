@@ -8,9 +8,9 @@ export type Instance = Element;
 export type TextInstance = Text;
 
 export const createInstance = (type: string, props: Props) => {
-	const element = document.createElement(type);
+	const element = document.createElement(type) as unknown;
 
-	// updateFiberProps(element as DOMElement, props);
+	updateFiberProps(element as DOMElement, props);
 	return element;
 };
 
