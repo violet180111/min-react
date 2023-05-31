@@ -1,5 +1,6 @@
 import { FiberNode } from './fiber';
 import {
+	Fragment,
 	FunctionComponent,
 	HostComponent,
 	HostRoot,
@@ -49,6 +50,14 @@ function updateFunctionComponent(wip: FiberNode) {
 	return wip.child;
 }
 
+function updateFragment(wip: FiberNode) {
+	const nextChild = wip.pendingProps;
+
+	reconcileChildren(wip, nextChild);
+
+	return wip.child;
+}
+
 function reconcileChildren(wip: FiberNode, children?: ReactElement) {
 	const current = wip.alternate;
 
@@ -73,6 +82,8 @@ export const beginWork = (wip: FiberNode) => {
 			return null;
 		case FunctionComponent:
 			return updateFunctionComponent(wip);
+		case Fragment:
+			return updateFragment(wip);
 		default:
 			if (__DEV__) {
 				console.log('beginWork 未实现的类型');

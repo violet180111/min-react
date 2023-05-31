@@ -1,7 +1,9 @@
 import {
 	Container,
+	Instance,
 	appendChildToContainer,
 	commitUpdate,
+	insertChildToContainer,
 	removeChild
 } from 'hostConfig';
 import { FiberNode, FiberRootNode } from './fiber';
@@ -98,22 +100,68 @@ const getHostParent = (fiber: FiberNode) => {
 	return null;
 };
 
-const appendPlacementNodeIntoContainer = (
+const getHostSibling = (fiber: FiberNode) => {
+	let node = fiber;
+
+	findSibling: while (true) {
+		while (node.sibling === null) {
+			const parent = node.return;
+
+			if (
+				parent === null ||
+				parent.tag === HostComponent ||
+				parent.tag === HostRoot
+			) {
+				return null;
+			}
+
+			node = parent;
+		}
+
+		node.sibling.return = node.return;
+		node = node.sibling;
+
+		while (node.tag !== HostText && node.tag !== HostComponent) {
+			if ((node.flags & Placement) !== NoFlags) {
+				continue findSibling;
+			}
+
+			if (node.child === null) {
+				continue findSibling;
+			} else {
+				node.child.return = node.return;
+				node = node.child;
+			}
+		}
+
+		if ((node.flags & Placement) === NoFlags) {
+			return node.stateNode;
+		}
+	}
+};
+
+const insertOrAppendPlacementNodeIntoContainer = (
+	hostParent: Container,
 	finishedWork: FiberNode,
-	hostParent: Container
+	before?: Instance
 ) => {
 	if (finishedWork.tag === HostComponent || finishedWork.tag === HostText) {
-		appendChildToContainer(hostParent, finishedWork.stateNode);
+		if (before) {
+			insertChildToContainer(hostParent, finishedWork.stateNode, before);
+		} else {
+			appendChildToContainer(hostParent, finishedWork.stateNode);
+		}
+
 		return;
 	}
 
 	const child = finishedWork.child;
 	if (child !== null) {
-		appendPlacementNodeIntoContainer(child, hostParent);
+		insertOrAppendPlacementNodeIntoContainer(hostParent, child);
 		let sibling = child.sibling;
 
 		while (sibling !== null) {
-			appendPlacementNodeIntoContainer(sibling, hostParent);
+			insertOrAppendPlacementNodeIntoContainer(hostParent, sibling);
 
 			sibling = sibling.sibling;
 		}
@@ -191,5 +239,7 @@ const commitPlacement = (finishedWork: FiberNode) => {
 
 	const hostParent = getHostParent(finishedWork) as Container;
 
-	appendPlacementNodeIntoContainer(finishedWork, hostParent);
+	const sibling = getHostSibling(finishedWork);
+
+	insertOrAppendPlacementNodeIntoContainer(hostParent, finishedWork, sibling);
 };

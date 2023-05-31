@@ -37,21 +37,14 @@ export const isValidElement = (element: any): boolean => {
 export const jsx = (
 	type: ElementType,
 	config: any,
+	key: Key,
 	...maybeChildren: any[]
 ) => {
-	let key: Key = null;
 	const props: Props = {};
 	let ref: Ref = null;
 
 	for (const prop in config) {
 		const val = config[prop];
-
-		if (prop === 'key') {
-			if (val !== undefined) {
-				key = '' + val;
-			}
-			continue;
-		}
 
 		if (prop === 'ref') {
 			if (val !== undefined) {
@@ -78,20 +71,12 @@ export const jsx = (
 	return ReactElement(type, key, ref, props);
 };
 
-export const jsxDEV = (type: ElementType, config: any) => {
-	let key: Key = null;
+export const jsxDEV = (type: ElementType, config: any, key: Key) => {
 	const props: Props = {};
 	let ref: Ref = null;
 
 	for (const prop in config) {
 		const val = config[prop];
-
-		if (prop === 'key') {
-			if (val !== undefined) {
-				key = '' + val;
-			}
-			continue;
-		}
 
 		if (prop === 'ref') {
 			if (val !== undefined) {
