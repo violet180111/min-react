@@ -5,6 +5,7 @@ import { FiberNode, FiberRootNode } from './fiber';
 import type { Container } from './hostConfig';
 import type { ReactElement } from 'shared/ReactTypes';
 import type { UpdateQueue } from './updateQueue';
+import { requestUpdateLanes } from './fiberLanes';
 
 export function createContainer(container: Container) {
 	const hostRootFiber = new FiberNode(HostRoot, {}, null);
@@ -20,7 +21,8 @@ export function updateContainer(
 	root: FiberRootNode
 ) {
 	const hostRootFiber = root.current;
-	const update = createUpdate<ReactElement | null>(element);
+	const lane = requestUpdateLanes();
+	const update = createUpdate<ReactElement | null>(element, lane);
 
 	enqueueUpdate(
 		hostRootFiber.updateQueue as UpdateQueue<ReactElement | null>,
@@ -29,7 +31,7 @@ export function updateContainer(
 
 	console.info('开始更新流程');
 
-	scheduleUpdateOnFiber(hostRootFiber);
+	scheduleUpdateOnFiber(hostRootFiber, lane);
 
 	return element;
 }

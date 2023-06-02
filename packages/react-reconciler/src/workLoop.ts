@@ -5,6 +5,7 @@ import { MutationMask, NoFlags } from './fiberFlags';
 import { HostRoot } from './workTag';
 import type { FiberNode, FiberRootNode } from './fiber';
 import { commitMutationEffects } from './commitWork';
+import { Lane, getHighestPriorityLane, mergeLanes } from './fiberLanes';
 
 let workInProgress: FiberNode | null = null;
 
@@ -28,10 +29,20 @@ export function markUpdateFromFiberToRoot(fiber: FiberNode) {
 	return null;
 }
 
-export function scheduleUpdateOnFiber(fiber: FiberNode) {
+export function markRootUpdated(root: FiberRootNode, lane: Lane) {
+	root.pendingLanes = mergeLanes(root.pendingLanes, lane);
+}
+
+export function scheduleUpdateOnFiber(fiber: FiberNode, lane: Lane) {
 	const root = markUpdateFromFiberToRoot(fiber);
 
-	renderRoot(root);
+	markRootUpdated(root, lane);
+
+	ensureRootIsSchedule(root);
+}
+
+export function ensureRootIsSchedule(root: FiberRootNode) {
+	const updateLane = getHighestPriorityLane(root.pendingLanes);
 }
 
 export function renderRoot(root: FiberRootNode) {
