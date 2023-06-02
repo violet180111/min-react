@@ -1,5 +1,6 @@
 import { Flags, NoFlags } from './fiberFlags';
 import { Fragment, FunctionComponent, HostComponent, WorkTag } from './workTag';
+import { REACT_FRAGMENT_TYPE } from 'shared/ReactSymbols';
 import type { Props, Key, Ref, ReactElement } from 'shared/ReactTypes';
 import type { Container } from 'hostConfig';
 
@@ -97,6 +98,10 @@ export function createFiberFromElement(element: ReactElement) {
 	const { type, key, props } = element;
 	let tag: WorkTag = FunctionComponent;
 
+	if (type === REACT_FRAGMENT_TYPE) {
+		return createFiberFromFragment(props.children, key);
+	}
+
 	if (typeof type === 'string') {
 		tag = HostComponent;
 	} else if (typeof type !== 'function' && __DEV__) {
@@ -110,8 +115,8 @@ export function createFiberFromElement(element: ReactElement) {
 	return fiber;
 }
 
-export function createFiberFromFragment(fragment: any[], key: Key): FiberNode {
-	const fiber = new FiberNode(Fragment, { children: fragment }, key);
+export function createFiberFromFragment(elements: any[], key: Key): FiberNode {
+	const fiber = new FiberNode(Fragment, elements, key);
 
 	return fiber;
 }

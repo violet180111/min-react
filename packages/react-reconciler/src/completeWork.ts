@@ -6,6 +6,7 @@ import {
 } from 'hostConfig';
 import { FiberNode } from './fiber';
 import {
+	Fragment,
 	FunctionComponent,
 	HostComponent,
 	HostRoot,
@@ -63,8 +64,7 @@ export const completeWork = (wip: FiberNode) => {
 			bubbleProperties(wip);
 			return null;
 		case HostRoot:
-			bubbleProperties(wip);
-			return null;
+		case Fragment:
 		case FunctionComponent:
 			bubbleProperties(wip);
 			return null;

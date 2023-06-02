@@ -42,10 +42,11 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 			}
 
 			if (Array.isArray(newChild)) {
-				if (__DEV__) {
-					console.warn('未实现的数组类型的child');
-					return null;
-				}
+				const created = createFiberFromFragment(newChild, null);
+
+				created.return = returnFiber;
+
+				return created;
 			}
 		}
 
@@ -141,17 +142,17 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 	function updateFragment(
 		returnFiber: FiberNode,
 		current: FiberNode | null,
-		fragment: any[],
+		elements: any[],
 		key: Key
 	): FiberNode {
 		if (current === null || current.tag !== Fragment) {
-			const created = createFiberFromFragment(fragment, key);
+			const created = createFiberFromFragment(elements, key);
 
 			created.return = returnFiber;
 
 			return created;
 		} else {
-			const existing = useFiber(current, fragment);
+			const existing = useFiber(current, elements);
 
 			existing.return = returnFiber;
 
@@ -213,13 +214,7 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 			}
 
 			if (Array.isArray(newChild)) {
-				if (key !== null) {
-					return null;
-				}
-				if (__DEV__) {
-					console.warn('未实现的数组类型的child');
-					return null;
-				}
+				return updateFragment(returnFiber, oldFiber, newChild, key);
 			}
 		}
 
@@ -288,6 +283,10 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 			}
 		}
 
+		if (Array.isArray(newChild)) {
+			return updateFragment(returnFiber, matchedFiber, newChild, key);
+		}
+
 		return null;
 	}
 
@@ -336,16 +335,16 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 						existing.return = returnFiber;
 
 						return existing;
-					} else {
-						if (elementType === currentFiber.type) {
-							deleteRemainingChildren(returnFiber, currentFiber.sibling);
+					}
+				} else {
+					if (elementType === currentFiber.type) {
+						deleteRemainingChildren(returnFiber, currentFiber.sibling);
 
-							const existing = useFiber(currentFiber, element.props);
+						const existing = useFiber(currentFiber, element.props);
 
-							existing.return = returnFiber;
+						existing.return = returnFiber;
 
-							return existing;
-						}
+						return existing;
 					}
 
 					deleteRemainingChildren(returnFiber, currentFiber);
@@ -511,6 +510,7 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 		if (__DEV__) {
 			console.warn('未实现的reconcile类型', newChild);
 		}
+
 		return null;
 	};
 }

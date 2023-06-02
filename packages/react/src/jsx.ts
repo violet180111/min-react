@@ -1,4 +1,4 @@
-import { REACT_ELEMENT_TYPE } from 'shared/ReactSymbols';
+import { REACT_ELEMENT_TYPE, REACT_FRAGMENT_TYPE } from 'shared/ReactSymbols';
 import type {
 	Key,
 	Ref,
@@ -6,7 +6,8 @@ import type {
 	ReactElement,
 	ElementType
 } from 'shared/ReactTypes';
-// ReactElement
+
+export const Fragment = REACT_FRAGMENT_TYPE;
 
 const ReactElement = function (
 	type: ElementType,
@@ -68,7 +69,7 @@ export const jsx = (
 		}
 	}
 
-	return ReactElement(type, key, ref, props);
+	return ReactElement(type, key ?? null, ref, props);
 };
 
 export const jsxDEV = (type: ElementType, config: any, key: Key) => {
@@ -90,5 +91,5 @@ export const jsxDEV = (type: ElementType, config: any, key: Key) => {
 		}
 	}
 
-	return ReactElement(type, key, ref, props);
+	return ReactElement(type, key ?? null, ref, props);
 };

@@ -87,8 +87,8 @@ export function removeChild(
 }
 
 export function insertChildToContainer(
-	child: Instance,
 	container: Container,
+	child: Instance,
 	before: Instance
 ) {
 	container.insertBefore(child, before);

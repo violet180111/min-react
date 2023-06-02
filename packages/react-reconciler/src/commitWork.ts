@@ -168,15 +168,33 @@ const insertOrAppendPlacementNodeIntoContainer = (
 	}
 };
 
+function recordHostChildrenToDelete(
+	hostChildrenToDelete: FiberNode[],
+	unmountFiber: FiberNode
+) {
+	const lastOne = hostChildrenToDelete[hostChildrenToDelete.length - 1];
+	if (!lastOne) {
+		hostChildrenToDelete.push(unmountFiber);
+	} else {
+		let node = lastOne.sibling;
+		while (node !== null) {
+			if (unmountFiber === node) {
+				hostChildrenToDelete.push(unmountFiber);
+			}
+			node = node.sibling;
+		}
+	}
+}
+
 const commitDeletion = (childToDeletion: FiberNode) => {
-	let rootHostNode: FiberNode | null = null;
+	// 在Fragment之前，只需删除子树的根Host节点，但支持Fragment后，可能需要删除同级多个节点
+	const hostChildrenToDelete: FiberNode[] = [];
 
 	commitNestedComponent(childToDeletion, (unmountFiber) => {
 		switch (unmountFiber.tag) {
+			case HostText:
 			case HostComponent:
-				if (rootHostNode === null) {
-					rootHostNode = unmountFiber;
-				}
+				recordHostChildrenToDelete(hostChildrenToDelete, unmountFiber);
 				return;
 			case FunctionComponent:
 				return;
@@ -188,11 +206,13 @@ const commitDeletion = (childToDeletion: FiberNode) => {
 		}
 	});
 
-	if (rootHostNode) {
-		const hostParent = getHostParent(rootHostNode);
+	if (hostChildrenToDelete.length) {
+		const hostParent = getHostParent(childToDeletion);
 
 		if (hostParent) {
-			removeChild(hostParent, (rootHostNode as FiberNode).stateNode);
+			hostChildrenToDelete.forEach((node) => {
+				removeChild(hostParent, node.stateNode);
+			});
 		}
 	}
 

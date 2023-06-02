@@ -58,7 +58,7 @@ function updateFragment(wip: FiberNode) {
 	return wip.child;
 }
 
-function reconcileChildren(wip: FiberNode, children?: ReactElement) {
+function reconcileChildren(wip: FiberNode, children: any) {
 	const current = wip.alternate;
 
 	if (current) {
