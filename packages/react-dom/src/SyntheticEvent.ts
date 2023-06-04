@@ -30,7 +30,7 @@ export function updateFiberProps(node: DOMElement, props: Props) {
 
 export function initEvent(container: Container, eventType: EventType) {
 	if (!validEventTypeList.includes(eventType)) {
-		console.warn('当前不支持', eventType, '事件');
+		console.error('当前不支持', eventType, '事件');
 		return;
 	}
 
@@ -65,7 +65,7 @@ export function dispatchEvent(
 	const targetElement = e.target;
 
 	if (targetElement === null) {
-		console.warn('事件不存在target', e);
+		console.error('事件不存在target', e);
 		return;
 	}
 

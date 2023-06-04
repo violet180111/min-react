@@ -94,7 +94,7 @@ const getHostParent = (fiber: FiberNode) => {
 	}
 
 	if (__DEV__) {
-		console.warn('未找到 host parent');
+		console.error('未找到 host parent');
 	}
 
 	return null;
@@ -200,7 +200,7 @@ const commitDeletion = (childToDeletion: FiberNode) => {
 				return;
 			default:
 				if (__DEV__) {
-					console.warn('未处理的unmountFiber');
+					console.error('未处理的unmountFiber');
 				}
 				break;
 		}

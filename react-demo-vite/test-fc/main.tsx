@@ -14,17 +14,29 @@ function App() {
 	// window.setList = setList;
 
 	const [num, setNum] = useState(1);
-	const arr =
-		num === 1
-			? [<li key="1">1</li>, <li key="2">2</li>, <li key="3">3</li>]
-			: [<li key="3">3</li>, <li key="2">2</li>, <li key="1">1</li>];
+	// const arr =
+	// 	num === 1
+	// 		? [<li key="1">1</li>, <li key="2">2</li>, <li key="3">3</li>]
+	// 		: [<li key="3">3</li>, <li key="2">2</li>, <li key="1">1</li>];
+
+	// return (
+	// 	<ul onClick={() => setNum(0)}>
+	// 		{arr}
+	// 		<li key="4">4</li>
+	// 		<li key="5">5</li>
+	// 	</ul>
+	// );
 
 	return (
-		<ul onClick={() => setNum(0)}>
-			{arr}
-			<li key="4">4</li>
-			<li key="5">5</li>
-		</ul>
+		<div
+			onClick={() => {
+				setNum((preNum) => preNum + 1);
+				setNum((preNum) => preNum + 1);
+				setNum((preNum) => preNum + 1);
+			}}
+		>
+			{num}
+		</div>
 	);
 }
 

@@ -277,7 +277,7 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 
 			if (Array.isArray(newChild)) {
 				if (__DEV__) {
-					console.warn('未实现的数组类型的child');
+					console.error('未实现的数组类型的child');
 					return null;
 				}
 			}
@@ -508,7 +508,7 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 		}
 
 		if (__DEV__) {
-			console.warn('未实现的reconcile类型', newChild);
+			console.error('未实现的reconcile类型', newChild);
 		}
 
 		return null;
