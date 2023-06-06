@@ -1,3 +1,8 @@
+import {
+	unstable_NormalPriority as NormalPriority,
+	unstable_scheduleCallback as scheduleCallback,
+	unstable_shouldYield as shouldYield
+} from 'scheduler';
 import { beginWork } from './beginWork';
 import { completeWork } from './completeWork';
 import { PendingPassiveEffects, createWorkInProgress } from './fiber';
@@ -14,17 +19,19 @@ import {
 	NoLane,
 	SyncLane,
 	getHighestPriorityLane,
+	lanesToSchedulerPriority,
 	markRootFinished,
 	mergeLanes
 } from './fiberLanes';
 import { scheduleMicroTask } from 'hostConfig';
 import { flushSyncCallbacks, scheduleSyncCallback } from './syncTaskQueue';
-import {
-	unstable_scheduleCallback as scheduleCallback,
-	unstable_NormalPriority as NormalPriority
-} from 'scheduler';
 import type { FiberNode, FiberRootNode } from './fiber';
 import { HookHasEffect, Passive } from './hookEffectTags';
+
+type RootStatus = number;
+
+const RootInCompleted: RootStatus = 1;
+const RootCompleted: RootStatus = 2;
 
 let workInProgress: FiberNode | null = null;
 let wipRootRenderLane: Lane = NoLane;
@@ -79,9 +86,15 @@ export function ensureRootIsScheduled(root: FiberRootNode) {
 
 		scheduleMicroTask(flushSyncCallbacks);
 	} else {
+		const schedulePriority = lanesToSchedulerPriority(updateLane);
+
+		scheduleCallback(
+			schedulePriority,
+			performConcurrentWorkOnRoot.bind(null, root)
+		);
 	}
 }
-export function performSyncWorkOnRoot(root: FiberRootNode, lane: Lane) {
+export function performSyncWorkOnRoot(root: FiberRootNode) {
 	const nextLane = getHighestPriorityLane(root.pendingLanes);
 
 	if (nextLane !== SyncLane) {
@@ -90,15 +103,73 @@ export function performSyncWorkOnRoot(root: FiberRootNode, lane: Lane) {
 		return;
 	}
 
-	if (__DEV__) {
-		console.log('render 阶段开始');
+	const exitStatus = renderRoot(root, nextLane, false);
+
+	if (exitStatus === RootCompleted) {
+		const finishedWork = root.current.alternate;
+
+		root.finishedWork = finishedWork;
+		root.finishLane = nextLane;
+
+		wipRootRenderLane = NoLane;
+
+		commitRoot(root);
+	} else if (__DEV__) {
+		console.error('还未实现同步更新的结束状态');
+	}
+}
+
+export function performConcurrentWorkOnRoot(
+	root: FiberRootNode,
+	didTimeout: boolean
+): any {
+	const nextLane = getHighestPriorityLane(root.pendingLanes);
+	const curCallbackNode = root.callbackNode;
+
+	if (nextLane === NoLane) {
+		return null;
 	}
 
-	prepareFreshStack(root, lane);
+	const needSync = nextLane === SyncLane || didTimeout;
+
+	const exitStatus = renderRoot(root, nextLane, !needSync);
+
+	ensureRootIsScheduled(root);
+
+	if (exitStatus === RootInCompleted) {
+		if (root.callbackNode !== curCallbackNode) {
+			return null;
+		}
+
+		return performConcurrentWorkOnRoot.bind(null, root);
+	}
+
+	if (exitStatus === RootCompleted) {
+		const finishedWork = root.current.alternate;
+
+		root.finishedWork = finishedWork;
+		root.finishLane = nextLane;
+
+		wipRootRenderLane = NoLane;
+
+		commitRoot(root);
+	} else if (__DEV__) {
+		console.error('还未实现并发更新的结束状态');
+	}
+}
+
+function renderRoot(root: FiberRootNode, lane: Lane, shouldTimeSlice: boolean) {
+	if (__DEV__) {
+		console.info(`开始 ${shouldTimeSlice ? '并发' : '同步'}`);
+	}
+
+	if (wipRootRenderLane !== lane) {
+		prepareFreshStack(root, lane);
+	}
 
 	do {
 		try {
-			workLoop();
+			shouldTimeSlice ? workLoopConcurrent() : workLoopSync();
 			break;
 		} catch (e) {
 			if (__DEV__) {
@@ -109,14 +180,15 @@ export function performSyncWorkOnRoot(root: FiberRootNode, lane: Lane) {
 		}
 	} while (true);
 
-	const finishedWork = root.current.alternate;
+	if (shouldTimeSlice && workInProgress !== null) {
+		return RootInCompleted;
+	}
 
-	root.finishedWork = finishedWork;
-	root.finishLane = lane;
+	if (shouldTimeSlice && workInProgress === null && __DEV__) {
+		console.error('render 阶段执行完 workInProgress 不应该为 null');
+	}
 
-	wipRootRenderLane = NoLane;
-
-	commitRoot(root);
+	return RootCompleted;
 }
 
 function flushPassiveEffects(pendingPassiveEffects: PendingPassiveEffects) {
@@ -197,8 +269,14 @@ export function commitRoot(root: FiberRootNode) {
 	ensureRootIsScheduled(root);
 }
 
-export function workLoop() {
+export function workLoopSync() {
 	while (workInProgress !== null) {
+		performUnitOfWork(workInProgress);
+	}
+}
+
+export function workLoopConcurrent() {
+	while (workInProgress !== null && !shouldYield()) {
 		performUnitOfWork(workInProgress);
 	}
 }

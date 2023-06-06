@@ -7,8 +7,9 @@ import {
 } from './workTags';
 import { REACT_FRAGMENT_TYPE } from 'shared/ReactSymbols';
 import { Lane, Lanes, NoLane, NoLanes } from './fiberLanes';
-import type { Props, Key, Ref, ReactElement } from 'shared/ReactTypes';
+import type { CallbackNode } from 'scheduler';
 import type { Container } from 'hostConfig';
+import type { Props, Key, Ref, ReactElement } from 'shared/ReactTypes';
 import { Effect } from './fiberHooks';
 
 export class FiberNode {
@@ -70,6 +71,8 @@ export class FiberRootNode {
 	finishLane: Lane;
 	pendingLanes: Lanes;
 	pendingPassiveEffects: PendingPassiveEffects;
+	callbackNode: CallbackNode | null;
+	callbackPriority: Lane;
 
 	constructor(container: Container, hostRootFiber: FiberNode) {
 		this.container = container;
@@ -84,6 +87,8 @@ export class FiberRootNode {
 			unmount: [],
 			update: []
 		};
+		this.callbackNode = null;
+		this.callbackPriority = NoLane;
 	}
 }
 
