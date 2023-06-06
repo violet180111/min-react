@@ -17,13 +17,13 @@ export function flushSyncCallbacks() {
 
 		try {
 			syncQueue.forEach((callback) => callback());
-			syncQueue = null;
 		} catch (e) {
 			if (__DEV__) {
 				console.error('flushSyncCallbacks 出错', e);
 			}
 		} finally {
 			isFlushingSyncQueue = false;
+			syncQueue = null;
 		}
 	}
 }

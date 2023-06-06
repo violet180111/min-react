@@ -1,4 +1,4 @@
-import { HostRoot } from './workTag';
+import { HostRoot } from './workTags';
 import { scheduleUpdateOnFiber } from './workLoop';
 import { createUpdate, createUpdateQueue, enqueueUpdate } from './updateQueue';
 import { FiberNode, FiberRootNode } from './fiber';

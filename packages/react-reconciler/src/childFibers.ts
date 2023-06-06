@@ -6,7 +6,7 @@ import {
 	createWorkInProgress
 } from './fiber';
 import { REACT_ELEMENT_TYPE, REACT_FRAGMENT_TYPE } from 'shared/ReactSymbols';
-import { Fragment, HostText } from './workTag';
+import { Fragment, HostText } from './workTags';
 import { ChildDeletion, Placement } from './fiberFlags';
 
 type ExistingChildren = Map<string | number, FiberNode>;
@@ -295,18 +295,21 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 		currentFiber: FiberNode | null,
 		content: string | number
 	) {
-		while (currentFiber) {
-			if (currentFiber.tag === HostText) {
-				const existing = useFiber(currentFiber, { content });
+		let current = currentFiber;
+		while (current) {
+			if (current.tag === HostText) {
+				const existing = useFiber(current, { content });
 
 				existing.return = returnFiber;
 
-				deleteRemainingChildren(returnFiber, currentFiber.sibling);
+				deleteRemainingChildren(returnFiber, current.sibling);
 
 				return existing;
 			}
 
-			deleteRemainingChildren(returnFiber, currentFiber);
+			deleteRemainingChildren(returnFiber, current);
+
+			current = current.sibling;
 		}
 
 		const fiber = new FiberNode(HostText, { content }, null);

@@ -1,9 +1,14 @@
 import { beginWork } from './beginWork';
 import { completeWork } from './completeWork';
-import { createWorkInProgress } from './fiber';
-import { MutationMask, NoFlags } from './fiberFlags';
-import { HostRoot } from './workTag';
-import { commitMutationEffects } from './commitWork';
+import { PendingPassiveEffects, createWorkInProgress } from './fiber';
+import { MutationMask, NoFlags, PassiveMask } from './fiberFlags';
+import { HostRoot } from './workTags';
+import {
+	commitHookEffectListCreate,
+	commitHookEffectListDestroy,
+	commitHookEffectListUnmount,
+	commitMutationEffects
+} from './commitWork';
 import {
 	Lane,
 	NoLane,
@@ -14,10 +19,16 @@ import {
 } from './fiberLanes';
 import { scheduleMicroTask } from 'hostConfig';
 import { flushSyncCallbacks, scheduleSyncCallback } from './syncTaskQueue';
+import {
+	unstable_scheduleCallback as scheduleCallback,
+	unstable_NormalPriority as NormalPriority
+} from 'scheduler';
 import type { FiberNode, FiberRootNode } from './fiber';
+import { HookHasEffect, Passive } from './hookEffectTags';
 
 let workInProgress: FiberNode | null = null;
 let wipRootRenderLane: Lane = NoLane;
+let rootDoesHasPassiveEffects = false;
 
 export function prepareFreshStack(root: FiberRootNode, lane: Lane) {
 	workInProgress = createWorkInProgress(root.current, {});
@@ -108,6 +119,26 @@ export function performSyncWorkOnRoot(root: FiberRootNode, lane: Lane) {
 	commitRoot(root);
 }
 
+function flushPassiveEffects(pendingPassiveEffects: PendingPassiveEffects) {
+	pendingPassiveEffects.unmount.forEach((effect) => {
+		commitHookEffectListUnmount(Passive, effect);
+	});
+
+	pendingPassiveEffects.unmount = [];
+
+	pendingPassiveEffects.update.forEach((effect) => {
+		commitHookEffectListDestroy(Passive | HookHasEffect, effect);
+	});
+
+	pendingPassiveEffects.update.forEach((effect) => {
+		commitHookEffectListCreate(Passive | HookHasEffect, effect);
+	});
+
+	pendingPassiveEffects.update = [];
+
+	flushSyncCallbacks();
+}
+
 export function commitRoot(root: FiberRootNode) {
 	const finishedWork = root.finishedWork;
 
@@ -121,18 +152,33 @@ export function commitRoot(root: FiberRootNode) {
 
 	const lane = root.finishLane;
 
-	root.finishedWork = null;
-	root.finishLane = NoLane;
-
-	markRootFinished(root, lane);
-
 	if (lane === NoLane && __DEV__) {
 		console.error('commit 阶段 finishedLane 不应该是 NoLane');
 	}
 
+	root.finishedWork = null;
+	root.finishLane = NoLane;
+
+	markRootFinished(root, lane);
+	if (
+		(finishedWork.flags & PassiveMask) !== NoFlags ||
+		(finishedWork.subtreeFlags & PassiveMask) !== NoFlags
+	) {
+		if (!rootDoesHasPassiveEffects) {
+			rootDoesHasPassiveEffects = true;
+
+			scheduleCallback(NormalPriority, () => {
+				flushPassiveEffects(root.pendingPassiveEffects);
+
+				return;
+			});
+		}
+	}
+
 	const subtreeHasEffect =
-		(finishedWork.subtreeFlags & MutationMask) !== NoFlags;
-	const rootHasEffect = (finishedWork.flags & MutationMask) !== NoFlags;
+		(finishedWork.subtreeFlags & (MutationMask | PassiveMask)) !== NoFlags;
+	const rootHasEffect =
+		(finishedWork.flags & (MutationMask | PassiveMask)) !== NoFlags;
 
 	if (subtreeHasEffect || rootHasEffect) {
 		root.current = finishedWork;
@@ -140,10 +186,15 @@ export function commitRoot(root: FiberRootNode) {
 		// beforeMutation
 
 		// Mutation
-		commitMutationEffects(finishedWork);
+		commitMutationEffects(finishedWork, root);
 		// layout
 	} else {
+		root.current = finishedWork;
 	}
+
+	rootDoesHasPassiveEffects = false;
+
+	ensureRootIsScheduled(root);
 }
 
 export function workLoop() {

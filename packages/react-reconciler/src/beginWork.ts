@@ -5,7 +5,7 @@ import {
 	HostComponent,
 	HostRoot,
 	HostText
-} from './workTag';
+} from './workTags';
 import { processUpdateQueue } from './updateQueue';
 import type { ReactElement } from 'shared/ReactTypes';
 import type { UpdateQueue } from './updateQueue';

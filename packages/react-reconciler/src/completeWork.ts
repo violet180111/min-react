@@ -11,7 +11,7 @@ import {
 	HostComponent,
 	HostRoot,
 	HostText
-} from './workTag';
+} from './workTags';
 import { NoFlags, Update } from './fiberFlags';
 import { Container } from './hostConfig';
 import { updateFiberProps } from 'react-dom/src/SyntheticEvent';
