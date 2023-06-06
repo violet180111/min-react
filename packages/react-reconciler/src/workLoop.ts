@@ -1,7 +1,9 @@
 import {
 	unstable_NormalPriority as NormalPriority,
 	unstable_scheduleCallback as scheduleCallback,
-	unstable_shouldYield as shouldYield
+	unstable_shouldYield as shouldYield,
+	unstable_cancelCallback as cancelCallback,
+	CallbackNode
 } from 'scheduler';
 import { beginWork } from './beginWork';
 import { completeWork } from './completeWork';
@@ -38,6 +40,8 @@ let wipRootRenderLane: Lane = NoLane;
 let rootDoesHasPassiveEffects = false;
 
 export function prepareFreshStack(root: FiberRootNode, lane: Lane) {
+	root.finishLane = NoLane;
+	root.finishedWork = null;
 	workInProgress = createWorkInProgress(root.current, {});
 	wipRootRenderLane = lane;
 }
@@ -72,10 +76,31 @@ export function scheduleUpdateOnFiber(fiber: FiberNode, lane: Lane) {
 
 export function ensureRootIsScheduled(root: FiberRootNode) {
 	const updateLane = getHighestPriorityLane(root.pendingLanes);
+	const existingCallback = root.callbackNode;
 
 	if (updateLane === NoLane) {
+		if (existingCallback) {
+			cancelCallback(existingCallback);
+		}
+
+		root.callbackNode = null;
+		root.callbackPriority = NoLane;
+
 		return;
 	}
+
+	const prevPriority = root.callbackPriority;
+	const curPriority = updateLane;
+
+	if (prevPriority == curPriority) {
+		return;
+	}
+
+	if (existingCallback) {
+		cancelCallback(existingCallback);
+	}
+
+	let newCallback: CallbackNode | null = null;
 
 	if (updateLane === SyncLane) {
 		if (__DEV__) {
@@ -88,12 +113,16 @@ export function ensureRootIsScheduled(root: FiberRootNode) {
 	} else {
 		const schedulePriority = lanesToSchedulerPriority(updateLane);
 
-		scheduleCallback(
+		newCallback = scheduleCallback(
 			schedulePriority,
 			performConcurrentWorkOnRoot.bind(null, root)
 		);
 	}
+
+	root.callbackNode = newCallback;
+	root.callbackPriority = curPriority;
 }
+
 export function performSyncWorkOnRoot(root: FiberRootNode) {
 	const nextLane = getHighestPriorityLane(root.pendingLanes);
 
@@ -123,6 +152,18 @@ export function performConcurrentWorkOnRoot(
 	root: FiberRootNode,
 	didTimeout: boolean
 ): any {
+	const curCallback = root.callbackNode;
+
+	const didFlushPassiveEffects = flushPassiveEffects(
+		root.pendingPassiveEffects
+	);
+
+	if (didFlushPassiveEffects) {
+		if (curCallback !== root.callbackNode) {
+			return null;
+		}
+	}
+
 	const nextLane = getHighestPriorityLane(root.pendingLanes);
 	const curCallbackNode = root.callbackNode;
 
@@ -192,23 +233,33 @@ function renderRoot(root: FiberRootNode, lane: Lane, shouldTimeSlice: boolean) {
 }
 
 function flushPassiveEffects(pendingPassiveEffects: PendingPassiveEffects) {
+	let didFlushPassiveEffects = false;
+
 	pendingPassiveEffects.unmount.forEach((effect) => {
+		didFlushPassiveEffects = true;
+
 		commitHookEffectListUnmount(Passive, effect);
 	});
 
 	pendingPassiveEffects.unmount = [];
 
 	pendingPassiveEffects.update.forEach((effect) => {
+		didFlushPassiveEffects = true;
+
 		commitHookEffectListDestroy(Passive | HookHasEffect, effect);
 	});
 
 	pendingPassiveEffects.update.forEach((effect) => {
+		didFlushPassiveEffects = true;
+
 		commitHookEffectListCreate(Passive | HookHasEffect, effect);
 	});
 
 	pendingPassiveEffects.update = [];
 
 	flushSyncCallbacks();
+
+	return didFlushPassiveEffects;
 }
 
 export function commitRoot(root: FiberRootNode) {

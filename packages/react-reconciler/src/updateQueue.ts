@@ -1,6 +1,6 @@
 import { Action } from 'shared/ReactTypes';
 import { Dispatch } from 'react/src/currentDispatch';
-import { Lane } from './fiberLanes';
+import { Lane, NoLane, isSubsetOfLanes } from './fiberLanes';
 import { Update } from './fiberFlags';
 
 export interface Update<State> {
@@ -53,37 +53,67 @@ export const processUpdateQueue = <State>(
 	baseState: State,
 	pendingUpdate: Update<State> | null,
 	renderLane: Lane
-): { memoizedState: State } => {
+): {
+	memoizedState: State;
+	baseState: State;
+	baseQueue: Update<State> | null;
+} => {
 	const result: ReturnType<typeof processUpdateQueue<State>> = {
-		memoizedState: baseState
+		memoizedState: baseState,
+		baseState,
+		baseQueue: null
 	};
 
 	if (pendingUpdate !== null) {
 		let first = pendingUpdate.next;
 		let pending = first as Update<any>;
 
+		let newBaseState = baseState;
+		let newBaseQueueFirst: Update<State> | null = null;
+		let newBaseQueueLast: Update<State> | null = null;
+		let newState = baseState;
+
 		do {
 			const updateLane = pending.lane;
 
-			if (updateLane === renderLane) {
+			if (!isSubsetOfLanes(renderLane, updateLane)) {
+				const clone = createUpdate(pending.action, pending.lane);
+
+				if (newBaseQueueFirst === null) {
+					newBaseQueueFirst = clone;
+					newBaseQueueLast = clone;
+					newBaseState = newState;
+				} else {
+					(newBaseQueueLast as Update<State>).next = newBaseQueueLast = clone;
+				}
+			} else {
+				if (newBaseQueueLast) {
+					const clone = createUpdate(pending.action, NoLane);
+
+					newBaseQueueLast.next = newBaseQueueLast = clone;
+				}
 				const action = pendingUpdate.action;
 
 				if (action instanceof Function) {
-					baseState = action(baseState);
+					newState = action(newState);
 				} else {
-					baseState = action;
-				}
-			} else {
-				if (__DEV__) {
-					console.error('不应该进入');
+					newState = action;
 				}
 			}
 
 			pending = pending.next as Update<any>;
 		} while (pending !== first);
-	}
 
-	result.memoizedState = baseState;
+		if (newBaseQueueLast === null) {
+			newBaseState = newState;
+		} else {
+			newBaseQueueLast.next = newBaseQueueFirst;
+		}
+
+		result.memoizedState = newState;
+		result.baseState = newBaseState;
+		result.baseQueue = newBaseQueueFirst;
+	}
 
 	return result;
 };
