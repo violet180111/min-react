@@ -12,7 +12,7 @@ import {
 	HostRoot,
 	HostText
 } from './workTags';
-import { NoFlags, Update } from './fiberFlags';
+import { NoFlags, Ref, Update } from './fiberFlags';
 import { Container } from './hostConfig';
 import { updateFiberProps } from 'react-dom/src/SyntheticEvent';
 
@@ -20,61 +20,73 @@ export const markUpdate = (fiber: FiberNode) => {
 	fiber.flags |= Update;
 };
 
-export const completeWork = (wip: FiberNode) => {
+export const markRef = (fiber: FiberNode) => {
+	fiber.flags |= Ref;
+};
+
+export const completeWork = (workInProgress: FiberNode) => {
 	if (__DEV__) {
-		console.info('completeWork', wip);
+		console.info('completeWork', workInProgress);
 	}
 
-	const newProps = wip.pendingProps;
-	const current = wip.alternate;
+	const newProps = workInProgress.pendingProps;
+	const current = workInProgress.alternate;
 
-	switch (wip.tag) {
+	switch (workInProgress.tag) {
 		case HostComponent:
-			if (current !== null && wip.stateNode) {
-				updateFiberProps(wip.stateNode, newProps);
+			if (current !== null && workInProgress.stateNode) {
+				updateFiberProps(workInProgress.stateNode, newProps);
+
+				if (current.ref !== workInProgress.ref) {
+					markRef(workInProgress);
+				}
 			} else {
-				const instance = createInstance(wip.type, newProps);
+				const instance = createInstance(workInProgress.type, newProps);
 
-				appendAllChildren(instance, wip);
+				appendAllChildren(instance, workInProgress);
 
-				wip.stateNode = instance;
+				workInProgress.stateNode = instance;
 
-				// if (finalizeInitialChildren(instance, wip.type, newProps)) {
-				// 	markUpdate(wip);
+				if (workInProgress.ref !== null) {
+					markRef(workInProgress);
+				}
+
+				// if (finalizeInitialChildren(instance, workInProgress.type, newProps)) {
+				// 	markUpdate(workInProgress);
 				// }
 			}
-			bubbleProperties(wip);
+			bubbleProperties(workInProgress);
 
 			return null;
 		case HostText:
-			if (current && wip.stateNode) {
+			if (current && workInProgress.stateNode) {
 				const oldText = current.memoizedProps?.content;
 				const nextText = newProps.content;
 
 				if (oldText !== nextText) {
-					markUpdate(wip);
+					markUpdate(workInProgress);
 				}
 			} else {
 				const instance = createTextInstance(newProps.content);
 
-				appendAllChildren(instance, wip);
+				appendAllChildren(instance, workInProgress);
 
-				wip.stateNode = instance;
+				workInProgress.stateNode = instance;
 			}
-			bubbleProperties(wip);
+			bubbleProperties(workInProgress);
 			return null;
 		case HostRoot:
 		case Fragment:
 		case FunctionComponent:
-			bubbleProperties(wip);
+			bubbleProperties(workInProgress);
 			return null;
 		default:
 			break;
 	}
 };
 
-function appendAllChildren(parent: Container, wip: FiberNode) {
-	let node = wip.child;
+function appendAllChildren(parent: Container, workInProgress: FiberNode) {
+	let node = workInProgress.child;
 
 	while (node !== null) {
 		if (node.tag === HostComponent || node.tag === HostText) {
@@ -85,12 +97,12 @@ function appendAllChildren(parent: Container, wip: FiberNode) {
 			continue;
 		}
 
-		if (node === wip) {
+		if (node === workInProgress) {
 			return;
 		}
 
 		while (node.sibling === null) {
-			if (node.return === null || node.return === wip) {
+			if (node.return === null || node.return === workInProgress) {
 				return;
 			}
 
@@ -103,17 +115,17 @@ function appendAllChildren(parent: Container, wip: FiberNode) {
 	}
 }
 
-function bubbleProperties(wip: FiberNode) {
+function bubbleProperties(workInProgress: FiberNode) {
 	let subtreeFlags = NoFlags;
-	let child = wip.child;
+	let child = workInProgress.child;
 
 	while (child !== null) {
 		subtreeFlags |= child.subtreeFlags;
 		subtreeFlags |= child.flags;
 
-		child.return = wip;
+		child.return = workInProgress;
 		child = child.sibling;
 	}
 
-	wip.subtreeFlags |= subtreeFlags;
+	workInProgress.subtreeFlags |= subtreeFlags;
 }

@@ -7,84 +7,113 @@ import {
 	HostText
 } from './workTags';
 import { processUpdateQueue } from './updateQueue';
-import type { ReactElement } from 'shared/ReactTypes';
 import type { UpdateQueue } from './updateQueue';
 import {
 	mountReconcileChildFibers,
 	updateReconcileChildFibers
 } from './childFibers';
 import { renderWithHooks } from './fiberHooks';
-import { Lane } from './fiberLanes';
+import { Lane, Lanes } from './fiberLanes';
+import { Ref } from './fiberFlags';
 
-function updateHostRoot(wip: FiberNode, renderLane: Lane) {
-	const baseState = wip.memoizedState;
-	const updateQueue = wip.updateQueue as UpdateQueue<Element>;
+function updateHostRoot(workInProgress: FiberNode, renderLanes: Lanes) {
+	const baseState = workInProgress.memoizedState;
+	const updateQueue = workInProgress.updateQueue as UpdateQueue<Element>;
 	const pending = updateQueue.shared.pending;
 
 	updateQueue.shared.pending = null;
 
-	const { memoizedState } = processUpdateQueue(baseState, pending, renderLane);
+	const { memoizedState } = processUpdateQueue(baseState, pending, renderLanes);
 
-	wip.memoizedState = memoizedState;
+	workInProgress.memoizedState = memoizedState;
 
-	const nextChild = wip.memoizedState;
+	const nextChild = workInProgress.memoizedState;
 
-	reconcileChildren(wip, nextChild);
+	reconcileChildren(workInProgress, nextChild, renderLanes);
 
-	return wip.child;
+	return workInProgress.child;
 }
 
-function updateHostComponent(wip: FiberNode) {
-	const nextProps = wip.pendingProps;
+function updateHostComponent(workInProgress: FiberNode, renderLanes: Lanes) {
+	const nextProps = workInProgress.pendingProps;
 	const nextChild = nextProps.children;
 
-	reconcileChildren(wip, nextChild);
+	markRef(workInProgress.alternate, workInProgress);
+	reconcileChildren(workInProgress, nextChild, renderLanes);
 
-	return wip.child;
+	return workInProgress.child;
 }
 
-function updateFunctionComponent(wip: FiberNode, renderLane: Lane) {
-	const nextChild = renderWithHooks(wip, renderLane);
+function updateFunctionComponent(
+	workInProgress: FiberNode,
+	renderLanes: Lanes
+) {
+	const nextChild = renderWithHooks(workInProgress, renderLanes);
 
-	reconcileChildren(wip, nextChild);
+	reconcileChildren(workInProgress, nextChild, renderLanes);
 
-	return wip.child;
+	return workInProgress.child;
 }
 
-function updateFragment(wip: FiberNode) {
-	const nextChild = wip.pendingProps;
+function updateFragment(workInProgress: FiberNode, renderLanes: Lanes) {
+	const nextChild = workInProgress.pendingProps;
 
-	reconcileChildren(wip, nextChild);
+	reconcileChildren(workInProgress, nextChild, renderLanes);
 
-	return wip.child;
+	return workInProgress.child;
 }
 
-function reconcileChildren(wip: FiberNode, children: any) {
-	const current = wip.alternate;
+function reconcileChildren(
+	workInProgress: FiberNode,
+	children: any,
+	lanes: Lanes
+) {
+	const current = workInProgress.alternate;
 
 	if (current) {
-		wip.child = updateReconcileChildFibers(wip, current?.child, children);
+		workInProgress.child = updateReconcileChildFibers(
+			workInProgress,
+			current?.child,
+			children,
+			lanes
+		);
 	} else {
-		wip.child = mountReconcileChildFibers(wip, null, children);
+		workInProgress.child = mountReconcileChildFibers(
+			workInProgress,
+			null,
+			children,
+			lanes
+		);
 	}
 }
 
-export const beginWork = (wip: FiberNode, renderLane: Lane) => {
+function markRef(current: FiberNode | null, workInProgress: FiberNode) {
+	const ref = workInProgress.ref;
+
+	if (
+		(current === null && ref !== null) ||
+		(current !== null && current.ref !== ref)
+	) {
+		workInProgress.flags |= Ref;
+	}
+}
+
+export const beginWork = (workInProgress: FiberNode, renderLanes: Lanes) => {
 	if (__DEV__) {
-		console.info('beginWork', wip);
+		console.info('beginWork', workInProgress);
 	}
 
-	switch (wip.tag) {
+	switch (workInProgress.tag) {
 		case HostRoot:
-			return updateHostRoot(wip, renderLane);
+			return updateHostRoot(workInProgress, renderLanes);
 		case HostComponent:
-			return updateHostComponent(wip);
+			return updateHostComponent(workInProgress, renderLanes);
 		case HostText:
 			return null;
 		case FunctionComponent:
-			return updateFunctionComponent(wip, renderLane);
+			return updateFunctionComponent(workInProgress, renderLanes);
 		case Fragment:
-			return updateFragment(wip);
+			return updateFragment(workInProgress, renderLanes);
 		default:
 			if (__DEV__) {
 				console.log('beginWork 未实现的类型');

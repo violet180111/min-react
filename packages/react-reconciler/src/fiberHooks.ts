@@ -1,6 +1,6 @@
 import { FiberNode } from './fiber';
 import internals from 'shared/internals';
-import { Dispatcher, Dispatch } from 'react/src/currentDispatch';
+import currentBatchConfig from 'react/src/currentBatchConfig';
 import {
 	UpdateQueue,
 	createUpdate,
@@ -11,9 +11,10 @@ import {
 } from './updateQueue';
 import { Action } from 'shared/ReactTypes';
 import { scheduleUpdateOnFiber } from './workLoop';
-import { Lane, NoLane, requestUpdateLane } from './fiberLanes';
+import { Lane, Lanes, NoLane, requestUpdateLane } from './fiberLanes';
 import { Flags, PassiveEffect } from './fiberFlags';
 import { HookHasEffect, Passive } from './hookEffectTags';
+import type { Dispatcher, Dispatch } from 'react/src/currentDispatch';
 
 export interface Hook {
 	memoizedState: any;
@@ -43,26 +44,30 @@ const { currentDispatcher } = internals;
 let currentlyRenderingFiber: FiberNode | null = null;
 let workInProgressHook: Hook | null = null;
 let currentHook: Hook | null = null;
-let renderLane: Lane = NoLane;
+let renderLanes: Lanes = NoLane;
 
 const HookDispatcherOnMount: Dispatcher = {
 	useState: mountState,
-	useEffect: mountEffect
+	useEffect: mountEffect,
+	useRef: mountRef,
+	useTransition: mountTransition
 };
 
 const HookDispatcherOnUpdate: Dispatcher = {
 	useState: updateState,
-	useEffect: updateEffect
+	useEffect: updateEffect,
+	useRef: updateRef,
+	useTransition: updateTransition
 };
 
-export function renderWithHooks(wip: FiberNode, lane: Lane) {
-	currentlyRenderingFiber = wip;
-	wip.memoizedState = null;
-	wip.updateQueue = null;
+export function renderWithHooks(workInProgress: FiberNode, lane: Lane) {
+	currentlyRenderingFiber = workInProgress;
+	workInProgress.memoizedState = null;
+	workInProgress.updateQueue = null;
 
-	renderLane = lane;
+	renderLanes = lane;
 
-	const current = wip.alternate;
+	const current = workInProgress.alternate;
 
 	if (current) {
 		currentDispatcher.current = HookDispatcherOnUpdate;
@@ -70,15 +75,15 @@ export function renderWithHooks(wip: FiberNode, lane: Lane) {
 		currentDispatcher.current = HookDispatcherOnMount;
 	}
 
-	const Component = wip.type;
-	const props = wip.pendingProps;
+	const Component = workInProgress.type;
+	const props = workInProgress.pendingProps;
 
 	const children = Component(props);
 
 	currentlyRenderingFiber = null;
 	workInProgressHook = null;
 	currentHook = null;
-	renderLane = NoLane;
+	renderLanes = NoLane;
 
 	return children;
 }
@@ -99,6 +104,8 @@ function mountState<State>(
 	const queue = createUpdateQueue<State>();
 
 	hook.updateQueue = queue;
+	hook.memoizedState = memorizedState;
+	hook.baseState = memorizedState;
 
 	// @ts-ignore
 	const dispatch: Dispatch<State> = (queue.dispatch = dispatchSetState.bind(
@@ -139,7 +146,7 @@ function updateState<State>(): [State, Dispatch<State>] {
 			memoizedState,
 			baseQueue: newBaseQueue,
 			baseState: newBaseState
-		} = processUpdateQueue(baseState, baseQueue, renderLane);
+		} = processUpdateQueue(baseState, baseQueue, renderLanes);
 
 		hook.memoizedState = memoizedState;
 		hook.baseQueue = newBaseQueue as Update<any>;
@@ -248,6 +255,53 @@ function pushEffect(
 	}
 
 	return effect;
+}
+
+function mountRef<T>(initialValue: T): { current: T } {
+	const hook = mountWorkInProgressHook();
+	const ref = { current: initialValue };
+
+	hook.memoizedState = ref;
+
+	return ref;
+}
+
+function updateRef<T>(initialValue: T): { current: T } {
+	const hook = updateWorkInProgressHook();
+
+	return hook.memoizedState;
+}
+
+function startTransition(setPending: Dispatch<boolean>, callback: () => void) {
+	setPending(true);
+
+	const prevTransition = currentBatchConfig.transition;
+
+	currentBatchConfig.transition = 1;
+
+	callback();
+
+	setPending(false);
+
+	currentBatchConfig.transition = prevTransition;
+}
+
+function mountTransition(): [boolean, (callback: () => void) => void] {
+	const [isPending, setIsPending] = mountState(false);
+	const hook = mountWorkInProgressHook();
+	const start = startTransition.bind(null, setIsPending);
+
+	hook.memoizedState = start;
+
+	return [isPending, start];
+}
+
+function updateTransition(): [boolean, (callback: () => void) => void] {
+	const [isPending] = updateState();
+	const hook = updateWorkInProgressHook();
+	const start = hook.memoizedState;
+
+	return [isPending as boolean, start];
 }
 
 function createFCUpdateQueue<State>() {
