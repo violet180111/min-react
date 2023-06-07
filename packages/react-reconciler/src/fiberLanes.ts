@@ -22,7 +22,7 @@ export function mergeLanes(lane1: Lane, lane2: Lane): Lanes {
   return lane1 | lane2;
 }
 
-export function requestUpdateLanes() {
+export function requestUpdateLane() {
 	const currentSchedulerPriorityLevel = getCurrentPriorityLevel();
 	const updateLane = schedulerPriorityToLane(currentSchedulerPriorityLevel);
 

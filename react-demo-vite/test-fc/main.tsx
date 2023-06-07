@@ -1,26 +1,44 @@
-import React from 'react';
+import ReactDOM from 'react-dom';
+
 import { useState } from 'react';
-import ReactDOM from 'react-dom/client';
+import TabButton from './TabButton';
+import AboutTab from './AboutTab';
+import PostsTab from './PostsTab';
+import ContactTab from './ContactTab';
+import './style.css';
 
 function App() {
-	const [num, update] = useState(100);
+	// const [isPending, startTransition] = useTransition();
+	const [tab, setTab] = useState('about');
+
+	function selectTab(nextTab) {
+		// startTransition(() => {
+		setTab(nextTab);
+		// });
+	}
+
 	return (
-		<ul onClick={() => update(50)}>
-			{new Array(num).fill(0).map((_, i) => {
-				return <Child key={i}>{i}</Child>;
-			})}
-		</ul>
+		<>
+			<TabButton isActive={tab === 'about'} onClick={() => selectTab('about')}>
+				首页
+			</TabButton>
+			<TabButton isActive={tab === 'posts'} onClick={() => selectTab('posts')}>
+				博客 (render慢)
+			</TabButton>
+			<TabButton
+				isActive={tab === 'contact'}
+				onClick={() => selectTab('contact')}
+			>
+				联系我
+			</TabButton>
+			<hr />
+			{tab === 'about' && <AboutTab />}
+			{tab === 'posts' && <PostsTab />}
+			{tab === 'contact' && <ContactTab />}
+		</>
 	);
 }
 
-function Child({ children }) {
-	const now = performance.now();
-	while (performance.now() - now < 4) {}
-	return <li>{children}</li>;
-}
-
-const root = ReactDOM.createRoot(
-	document.querySelector('#root') as HTMLDivElement
-);
+const root = ReactDOM.createRoot(document.querySelector('#root'));
 
 root.render(<App />);

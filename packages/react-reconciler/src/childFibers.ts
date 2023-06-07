@@ -393,6 +393,10 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 			const newFiber = updateSlot(returnFiber, oldFiber, newChild[newIdx]);
 
 			if (newFiber === null) {
+				if (oldFiber === null) {
+					oldFiber = nextOldFiber;
+				}
+
 				break;
 			}
 
@@ -469,6 +473,10 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 			previousNewFiber = newFiber;
 		}
 
+		existingChildren.forEach((fiber) => {
+			deleteChild(returnFiber, fiber);
+		});
+
 		return resultingFirstChild;
 	}
 
@@ -508,10 +516,6 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 
 		if (currentFiber) {
 			deleteRemainingChildren(returnFiber, currentFiber);
-		}
-
-		if (__DEV__) {
-			console.error('未实现的reconcile类型', newChild);
 		}
 
 		return null;

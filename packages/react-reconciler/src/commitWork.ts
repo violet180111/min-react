@@ -146,7 +146,7 @@ const getHostSibling = (fiber: FiberNode) => {
 			if (node.child === null) {
 				continue findSibling;
 			} else {
-				node.child.return = node.return;
+				node.child.return = node;
 				node = node.child;
 			}
 		}

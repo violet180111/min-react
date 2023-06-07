@@ -38,7 +38,7 @@ Object.keys(priorityList).forEach((key) => {
 	button.onclick = () => {
 		workList.push({
 			count: 300,
-			priority: priorityList[key] as Priority
+			priority: priorityList[key as keyof typeof priorityList] as Priority
 		});
 
 		schedule();
@@ -83,7 +83,7 @@ function schedule() {
 	}
 }
 
-function perform(work: Work, didTimeout?: boolean) {
+function perform(work: Work, didTimeout?: boolean): any {
 	const needSync = work.priority === ImmediatePriority || didTimeout;
 
 	while ((needSync || !shouldYield()) && work.count) {
