@@ -34,7 +34,7 @@ export function requestUpdateLane() {
 	const currentSchedulerPriorityLevel = getCurrentPriorityLevel();
 	const updateLane = schedulerPriorityToLane(currentSchedulerPriorityLevel);
 
-	console.info('updateLane!', updateLane);
+	console.log('updateLane!', updateLane);
 
 	return updateLane;
 }

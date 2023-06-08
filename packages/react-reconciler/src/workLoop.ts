@@ -232,7 +232,7 @@ export function performConcurrentWorkOnRoot(
 
 function renderRootSync(root: FiberRootNode, lanes: Lanes) {
 	if (__DEV__) {
-		console.info(`开始同步更新`);
+		console.log(`开始同步更新`);
 	}
 
 	const prevExecutionContext = executionContext;
@@ -265,7 +265,7 @@ function renderRootSync(root: FiberRootNode, lanes: Lanes) {
 
 function renderRootConcurrent(root: FiberRootNode, lanes: Lanes) {
 	if (__DEV__) {
-		console.info(`开始并发更新`);
+		console.log(`开始并发更新`);
 	}
 
 	const prevExecutionContext = executionContext;
@@ -346,7 +346,7 @@ export function commitRoot(root: FiberRootNode) {
 	}
 
 	if (__DEV__) {
-		console.info('commit 阶段开始', finishedWork);
+		console.log('commit 阶段开始', finishedWork);
 	}
 
 	const lane = root.finishLane;

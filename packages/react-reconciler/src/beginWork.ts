@@ -1,5 +1,6 @@
 import { FiberNode } from './fiber';
 import {
+	ContextProvider,
 	Fragment,
 	FunctionComponent,
 	HostComponent,
@@ -15,6 +16,7 @@ import {
 import { renderWithHooks } from './fiberHooks';
 import { Lane, Lanes } from './fiberLanes';
 import { Ref } from './fiberFlags';
+import { pushProvider } from './fiberContext';
 
 function updateHostRoot(workInProgress: FiberNode, renderLanes: Lanes) {
 	const baseState = workInProgress.memoizedState;
@@ -63,6 +65,26 @@ function updateFragment(workInProgress: FiberNode, renderLanes: Lanes) {
 	return workInProgress.child;
 }
 
+function updateContextProvider(workInProgress: FiberNode, renderLanes: Lanes) {
+	const provider = workInProgress.type;
+	const context = provider._context;
+	const oldProps = workInProgress.memoizedProps;
+	const newProps = workInProgress.pendingProps;
+	const newValue = newProps.value;
+
+	if (__DEV__ && !('value' in newProps)) {
+		console.error('<Context.Provider /> 需要 value props');
+	}
+
+	pushProvider(context, newValue);
+
+	const nextChild = newProps.children;
+
+	reconcileChildren(workInProgress, nextChild, renderLanes);
+
+	return workInProgress.child;
+}
+
 function reconcileChildren(
 	workInProgress: FiberNode,
 	children: any,
@@ -100,7 +122,7 @@ function markRef(current: FiberNode | null, workInProgress: FiberNode) {
 
 export const beginWork = (workInProgress: FiberNode, renderLanes: Lanes) => {
 	if (__DEV__) {
-		console.info('beginWork', workInProgress);
+		console.log('beginWork', workInProgress);
 	}
 
 	switch (workInProgress.tag) {
@@ -114,6 +136,8 @@ export const beginWork = (workInProgress: FiberNode, renderLanes: Lanes) => {
 			return updateFunctionComponent(workInProgress, renderLanes);
 		case Fragment:
 			return updateFragment(workInProgress, renderLanes);
+		case ContextProvider:
+			return updateContextProvider(workInProgress, renderLanes);
 		default:
 			if (__DEV__) {
 				console.log('beginWork 未实现的类型');

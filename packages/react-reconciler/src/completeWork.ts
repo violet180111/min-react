@@ -6,6 +6,7 @@ import {
 } from 'hostConfig';
 import { FiberNode } from './fiber';
 import {
+	ContextProvider,
 	Fragment,
 	FunctionComponent,
 	HostComponent,
@@ -15,6 +16,7 @@ import {
 import { NoFlags, Ref, Update } from './fiberFlags';
 import { Container } from './hostConfig';
 import { updateFiberProps } from 'react-dom/src/SyntheticEvent';
+import { popProvider } from './fiberContext';
 
 export const markUpdate = (fiber: FiberNode) => {
 	fiber.flags |= Update;
@@ -26,7 +28,7 @@ export const markRef = (fiber: FiberNode) => {
 
 export const completeWork = (workInProgress: FiberNode) => {
 	if (__DEV__) {
-		console.info('completeWork', workInProgress);
+		console.log('completeWork', workInProgress);
 	}
 
 	const newProps = workInProgress.pendingProps;
@@ -76,12 +78,18 @@ export const completeWork = (workInProgress: FiberNode) => {
 			bubbleProperties(workInProgress);
 			return null;
 		case HostRoot:
-		case Fragment:
 		case FunctionComponent:
+		case Fragment:
+			bubbleProperties(workInProgress);
+			return null;
+		case ContextProvider:
+			const context = workInProgress.type._context;
+
+			popProvider(context);
 			bubbleProperties(workInProgress);
 			return null;
 		default:
-			break;
+			return null;
 	}
 };
 

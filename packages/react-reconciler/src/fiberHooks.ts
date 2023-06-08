@@ -9,7 +9,7 @@ import {
 	processUpdateQueue,
 	Update
 } from './updateQueue';
-import { Action } from 'shared/ReactTypes';
+import { Action, ReactContext } from 'shared/ReactTypes';
 import { scheduleUpdateOnFiber } from './workLoop';
 import { Lane, Lanes, NoLane, requestUpdateLane } from './fiberLanes';
 import { Flags, PassiveEffect } from './fiberFlags';
@@ -50,6 +50,7 @@ const HookDispatcherOnMount: Dispatcher = {
 	useState: mountState,
 	useEffect: mountEffect,
 	useRef: mountRef,
+	useContext: readContext,
 	useTransition: mountTransition
 };
 
@@ -57,6 +58,7 @@ const HookDispatcherOnUpdate: Dispatcher = {
 	useState: updateState,
 	useEffect: updateEffect,
 	useRef: updateRef,
+	useContext: readContext,
 	useTransition: updateTransition
 };
 
@@ -270,6 +272,18 @@ function updateRef<T>(initialValue: T): { current: T } {
 	const hook = updateWorkInProgressHook();
 
 	return hook.memoizedState;
+}
+
+function readContext<T>(context: ReactContext<T>) {
+	const consumer = currentlyRenderingFiber;
+
+	if (consumer === null) {
+		throw new Error('context 需要有 consumer');
+	}
+
+	const value = context._currentValue;
+
+	return value;
 }
 
 function startTransition(setPending: Dispatch<boolean>, callback: () => void) {

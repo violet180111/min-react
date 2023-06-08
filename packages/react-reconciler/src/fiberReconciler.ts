@@ -34,7 +34,7 @@ export function updateContainer(
 			update
 		);
 
-		console.info('开始更新流程');
+		console.log('开始更新流程');
 
 		scheduleUpdateOnFiber(hostRootFiber, lane);
 	});

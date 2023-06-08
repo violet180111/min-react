@@ -324,7 +324,7 @@ const commitPassiveEffect = (
 	type: keyof PendingPassiveEffects
 ) => {
 	if (__DEV__) {
-		console.info('执行 PassiveEffect 操作', root);
+		console.log('执行 PassiveEffect 操作', root);
 	}
 
 	if (
@@ -347,7 +347,7 @@ const commitPassiveEffect = (
 
 const commitDeletion = (childToDeletion: FiberNode, root: FiberRootNode) => {
 	if (__DEV__) {
-		console.info('执行 Deletion 操作', childToDeletion);
+		console.log('执行 Deletion 操作', childToDeletion);
 	}
 	// 在Fragment之前，只需删除子树的根Host节点，但支持Fragment后，可能需要删除同级多个节点
 	const hostChildrenToDelete: FiberNode[] = [];
@@ -420,7 +420,7 @@ const commitNestedComponent = (
 
 const commitPlacement = (finishedWork: FiberNode) => {
 	if (__DEV__) {
-		console.info('执行 Placement 操作', finishedWork);
+		console.log('执行 Placement 操作', finishedWork);
 	}
 
 	const hostParent = getHostParent(finishedWork) as Container;

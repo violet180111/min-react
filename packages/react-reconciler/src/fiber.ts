@@ -1,11 +1,12 @@
 import { Flags, NoFlags } from './fiberFlags';
 import {
+	ContextProvider,
 	Fragment,
 	FunctionComponent,
 	HostComponent,
 	WorkTag
 } from './workTags';
-import { REACT_FRAGMENT_TYPE } from 'shared/ReactSymbols';
+import { REACT_FRAGMENT_TYPE, REACT_PROVIDER_TYPE } from 'shared/ReactSymbols';
 import { Lane, Lanes, NoLane, NoLanes } from './fiberLanes';
 import type { CallbackNode } from 'scheduler';
 import type { Container } from 'hostConfig';
@@ -140,6 +141,11 @@ export function createFiberFromElement(element: ReactElement, lanes: Lanes) {
 
 	if (typeof type === 'string') {
 		tag = HostComponent;
+	} else if (
+		typeof type === 'object' &&
+		type.$$typeof === REACT_PROVIDER_TYPE
+	) {
+		tag = ContextProvider;
 	} else if (typeof type !== 'function' && __DEV__) {
 		console.error('未实现的type类型', element);
 	}
